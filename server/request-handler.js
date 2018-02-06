@@ -11,6 +11,23 @@ this file and include it in basic-server.js so that it actually works.
 *Hint* Check out the node module documentation at http://nodejs.org/api/modules.html.
 
 **************************************************************/
+// These headers will allow Cross-Origin Resource Sharing (CORS).
+// This code allows this server to talk to websites that
+// are on different domains, for instance, your chat client.
+//
+// Your chat client is running from a url like file://your/chat/client/index.html,
+// which is considered a different domain.
+//
+// Another way to get around this restriction is to serve you chat
+// client from this domain by setting up static file serving.
+var defaultCorsHeaders = {
+  'access-control-allow-origin': '*',
+  'access-control-allow-methods': 'GET, POST, PUT, DELETE, OPTIONS',
+  'access-control-allow-headers': 'content-type, accept',
+  'access-control-max-age': 10 // Seconds.
+};
+var messages = {};
+messages.results = messages.results || [];
 
 var requestHandler = function(request, response) {
   // Request and Response come from node's http module.
@@ -28,24 +45,10 @@ var requestHandler = function(request, response) {
   // debugging help, but you should always be careful about leaving stray
   // console.logs in your code.
   console.log('Serving request type ' + request.method + ' for url ' + request.url);
+  
 
   // The outgoing status.
   var statusCode = 200;
-  // These headers will allow Cross-Origin Resource Sharing (CORS).
-  // This code allows this server to talk to websites that
-  // are on different domains, for instance, your chat client.
-  //
-  // Your chat client is running from a url like file://your/chat/client/index.html,
-  // which is considered a different domain.
-  //
-  // Another way to get around this restriction is to serve you chat
-  // client from this domain by setting up static file serving.
-  var defaultCorsHeaders = {
-    'access-control-allow-origin': '*',
-    'access-control-allow-methods': 'GET, POST, PUT, DELETE, OPTIONS',
-    'access-control-allow-headers': 'content-type, accept',
-    'access-control-max-age': 10 // Seconds.
-  };
 
   // See the note below about CORS headers.
   var headers = defaultCorsHeaders;
@@ -58,8 +61,33 @@ var requestHandler = function(request, response) {
 
   // .writeHead() writes to the request line and headers of the response,
   // which includes the status and all headers.
-  response.writeHead(statusCode, headers);
-
+  if (request.method === 'OPTIONS') {
+    statusCode = 203;
+    response.writeHead(statusCode, headers);
+    response.end(JSON.stringify(headers)); 
+  }
+  if (request.url !== '/classes/messages') {
+    statusCode = 404;
+    response.writeHead(statusCode, headers);
+    response.end('error 404');
+  } else if (request.method === 'GET') {
+    statusCode = 200;
+    response.writeHead(statusCode, headers);
+    response.end(JSON.stringify(messages));    
+  } else if (request.method === 'POST') {
+    var body;
+    statusCode = 201;
+    request.on('data', function(data) {
+      body = JSON.parse(data);
+    });
+    request.on('end', function() {
+      messages.results.push(body);
+      console.log('messages.results', messages.results);
+      response.writeHead(statusCode, headers);
+      response.end(JSON.stringify(body));
+    });
+    // put message into messages array;
+  }
   // Make sure to always call response.end() - Node may not send
   // anything back to the client until you do. The string you pass to
   // response.end() will be the body of the response - i.e. what shows
@@ -67,7 +95,8 @@ var requestHandler = function(request, response) {
   //
   // Calling .end "flushes" the response's internal buffer, forcing
   // node to actually send all the data over to the client.
-  response.end('Hello, World!');
+  // response.end('Hello, World!');
+  // response.send()
 };
 
 
