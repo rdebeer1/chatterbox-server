@@ -64,7 +64,11 @@ var requestHandler = function(request, response) {
   if (request.method === 'OPTIONS') {
     statusCode = 203;
     response.writeHead(statusCode, headers);
-    response.end(JSON.stringify(headers)); 
+    response.end(JSON.stringify(headers));
+  } else if (typeof _postData !== 'string') {
+    statusCode = 400;
+    response.writeHead(statusCode, headers);
+    response.end('error 400');
   }
   if (request.url !== '/classes/messages') {
     statusCode = 404;

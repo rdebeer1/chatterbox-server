@@ -87,7 +87,7 @@ describe('Node Server Request Listener Function', function() {
 
     expect(res._responseCode).to.equal(201);
 
-      // Now if we request the log for that room the message we posted should be there:
+    // Now if we request the log for that room the message we posted should be there:
     req = new stubs.request('/classes/messages', 'GET');
     res = new stubs.response();
 
@@ -115,5 +115,44 @@ describe('Node Server Request Listener Function', function() {
         expect(res._responseCode).to.equal(404);
       });
   });
+  
+  // check for options request
+  it('Should check for an OPTIONS request', function() {
+    var req = new stubs.request('/classes/messages', 'OPTIONS');
+    var res = new stubs.response();
 
+    handler.requestHandler(req, res);
+
+    expect(res._responseCode).to.equal(203);
+  });
+    
+  it('Should get back a list of options for an OPTIONS request', function() {
+    var req = new stubs.request('/classes/messages', 'OPTIONS');
+    var res = new stubs.response();
+
+    handler.requestHandler(req, res);
+
+    expect(res._data).to.eql(JSON.stringify({
+      'access-control-allow-origin': '*',
+      'access-control-allow-methods': 'GET, POST, PUT, DELETE, OPTIONS',
+      'access-control-allow-headers': 'content-type, accept',
+      'access-control-max-age': 10, // Seconds.
+      'Content-Type': 'text/plain'
+    }));
+  });
+  
+  it('Should 400 when sending a bad request', function() {
+    stubMsg = '[username: "juno", message: "do my bidding!" ]';
+    var req = new stubs.request('/classes/messages', 'POST', stubMsg);
+    var res = new stubs.response();
+
+    handler.requestHandler(req, res);
+
+    // Wait for response to return and then check status code
+    waitForThen(
+      function() { return res._ended; },
+      function() {
+        expect(res._responseCode).to.equal(400);
+      });
+  });
 });
